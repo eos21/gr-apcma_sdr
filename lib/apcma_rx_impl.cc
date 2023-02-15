@@ -57,8 +57,14 @@ apcma_rx_impl::apcma_rx_impl(int sf,
     m_sliding_width = sliding_width;
     m_subslot_width = subslot_width;
     m_threshold = threshold;
-    slot_cnt = 0;
-    m_num_consumed_samples = 0;
+
+    if (m_sliding_width > m_subslot_width) {
+        std::cerr << "Sliding width must be smaller than subslot width!" << std::endl;
+        std::exit(1);
+    }
+
+    subslot_cnt = 0;
+    sliding_cnt = 0;
 
     m_number_of_bins = (1u << m_sf);
     m_samples_per_symbol = m_number_of_bins * m_os_factor;
@@ -190,6 +196,38 @@ std::vector<int> apcma_rx_impl::get_css_pulse_detect_fftw(const gr_complex* samp
     return bin_above_threshold;
 }
 
+void apcma_rx_impl::make_codeword_table() {}
+
+std::vector<int> apcma_rx_impl::shift_register(std::vector<int> fft_result)
+{
+    std::vector<int> decoded_val;
+    // 検出した周波数binから必要なbinがある場合
+    // 必要なbinは2^sf-(m_sliding_width-1), ... , 2^sf-1, 2^sf(=0)
+    bool exist_needed_bins = false;
+    for (int i = 0; i < m_sliding_width; i++) {
+        if (std::binary_search(fft_result.begin(),
+                               fft_result.end(),
+                               (1 << m_sf - (m_sliding_width - 1) + i) % (1 << m_sf))) {
+            exist_needed_bins = true;
+            break;
+        }
+    }
+    if (sliding_cnt == 0) {
+        pulse_train << 1;
+    }
+    if (exist_needed_bins) {
+        pulse_train.set(pulse_train.size() - 1);
+        if (pulse_train[0]) {
+            for (int i = 0; i < (1 << m_N_bits); i++) {
+                if (codeword_tabel[i].is_subset_of(pulse_train)) {
+                    decoded_val.push_back(i);
+                }
+            }
+        }
+    }
+}
+
+
 int apcma_rx_impl::general_work(int noutput_items,
                                 gr_vector_int& ninput_items,
                                 gr_vector_const_void_star& input_items,
@@ -203,16 +241,6 @@ int apcma_rx_impl::general_work(int noutput_items,
     // Pulse detecting
     std::vector<int> detected_result =
         get_css_pulse_detect_fftw(&in_downed[0], &m_downchirp[0]);
-
-
-    // 検出した周波数binから必要なbinだけfilterする
-    // 必要なbinは2^sf-(m_sliding_width-1), ... , 2^sf-1, 2^sf(=0)
-    std::vector<int> filterd_detected_result;
-    for (int i = 0; i < m_sliding_width; i++) {
-        std::binary_search()
-    }
-
-
     // if (detected_result.size() != 0) {
     //     printf("%d:::", slot_cnt);
     //     for (uint32_t i = 0; i < detected_result.size(); i++) {
@@ -220,10 +248,15 @@ int apcma_rx_impl::general_work(int noutput_items,
     //     }
     //     std::cout << std::endl;
     // }
+    shift_register(detected_result);
 
 
-    m_num_consumed_samples += m_sliding_width;
-    slot_cnt++;
+    sliding_cnt = sliding_cnt++;
+    if (sliding_cnt == (m_subslot_width / m_sliding_width)) {
+        sliding_cnt = 0;
+        subslot_cnt++;
+    };
+
     consume_each(m_sliding_width);
     return m_sliding_width;
 }

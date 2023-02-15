@@ -7,7 +7,9 @@
                 "~/miniconda3/envs/gr310-apcma/include/"
             ],
             "defines": [],
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "~/miniconda3/envs/gr310-apcma/bin/cc",
+            "cppStandard": "c++20"
         }
     ],
     "version": 4
