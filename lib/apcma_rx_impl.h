@@ -41,13 +41,12 @@ private:
     uint32_t m_sliding_width;      ///< Sliding window width
     float m_threshold;             ///< Power threshold for subslot detecting
     uint32_t m_number_of_bins;     ///< Number of bins in each lora Symbol
-    uint32_t m_samples_per_symbol; ///< Number of samples received per lora symbols
+    uint32_t m_samples_per_symbol; ///< Number of samples received per slots
 
     std::vector<gr_complex> in_downed;   ///< downsampled input
     std::vector<gr_complex> m_downchirp; ///< Reference downchirp
     std::vector<gr_complex> m_upchirp;   ///< Reference upchirp
 
-    int64_t slot_cnt;                    ///< Number of slots already received
     uint32_t m_length_c;                 ///< Code length C of gengeral APCMA
     uint8_t m_N_pulses;                  ///< Number of pulses per single frame message
     uint32_t pulse_train_length;         ///< Pulse train length for high-throughput APCMA
@@ -61,13 +60,15 @@ private:
     fftwf_complex* fftw_out;
     fftwf_plan fftw_p;
 
-    uint64_t m_num_consumed_samples;
+    uint64_t subslot_cnt; ///< Number of slots already received
+    uint64_t sliding_cnt;
 
-
+    void make_codeword_table();
     std::vector<int> get_css_pulse_detect_kiss(const gr_complex* samples,
                                                gr_complex* ref_chirp);
     std::vector<int> get_css_pulse_detect_fftw(const gr_complex* samples,
                                                gr_complex* ref_chirp);
+    std::vector<int> shift_register(std::vector<int> fft_result);
 
 public:
     apcma_rx_impl(int sf,
