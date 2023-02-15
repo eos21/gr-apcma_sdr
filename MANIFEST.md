@@ -2,8 +2,9 @@ title: The APCMA_SDR OOT Module
 brief: Short description of gr-apcma_sdr
 tags: # Tags are arbitrary, but look at CGRAN what other authors are using
   - sdr
+  - APCMA
 author:
-  - Author Name <authors@email.address>
+  - Author Name <4322535@ed.tus.ac.jp>
 copyright_owner:
   - Copyright Owner 1
 license:
