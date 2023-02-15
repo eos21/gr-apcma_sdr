@@ -69,7 +69,7 @@ apcma_rx_impl::apcma_rx_impl(int sf,
     fftw_in = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * m_number_of_bins);
     fftw_out = (fftwf_complex*)fftwf_malloc(sizeof(fftwf_complex) * m_number_of_bins);
     fftw_p = fftwf_plan_dft_1d(
-        m_number_of_bins, fftw_in, fftw_out, FFTW_FORWARD, FFTW_MEASURE);
+        m_number_of_bins, fftw_in, fftw_out, FFTW_BACKWARD, FFTW_MEASURE);
     build_ref_chirps(&m_upchirp[0], &m_downchirp[0], m_sf);
 
     // prepare for kiss_fft
@@ -121,6 +121,7 @@ void apcma_rx_impl::forecast(int noutput_items, gr_vector_int& ninput_items_requ
 {
     ninput_items_required[0] = m_os_factor * 1 << (m_sf + 2);
 }
+
 /// @brief 入力されたIQ sampleをDechirp +
 /// FFTしてthresholdを超えた周波数binのvectorをreturn
 /// @param samples
@@ -202,13 +203,23 @@ int apcma_rx_impl::general_work(int noutput_items,
     // Pulse detecting
     std::vector<int> detected_result =
         get_css_pulse_detect_fftw(&in_downed[0], &m_downchirp[0]);
-    if (detected_result.size() != 0) {
-        printf("%d:::", slot_cnt);
-        for (uint32_t i = 0; i < detected_result.size(); i++) {
-            printf("%3d,\t", detected_result[i]);
-        }
-        std::cout << std::endl;
+
+
+    // 検出した周波数binから必要なbinだけfilterする
+    // 必要なbinは2^sf-(m_sliding_width-1), ... , 2^sf-1, 2^sf(=0)
+    std::vector<int> filterd_detected_result;
+    for (int i = 0; i < m_sliding_width; i++) {
+        std::binary_search()
     }
+
+
+    // if (detected_result.size() != 0) {
+    //     printf("%d:::", slot_cnt);
+    //     for (uint32_t i = 0; i < detected_result.size(); i++) {
+    //         printf("%3d,\t", detected_result[i]);
+    //     }
+    //     std::cout << std::endl;
+    // }
 
 
     m_num_consumed_samples += m_sliding_width;

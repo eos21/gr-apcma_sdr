@@ -264,8 +264,11 @@ dependencies:
   - zipp=3.8.1=pyhd8ed1ab_0
   - zlib=1.2.12=h166bdaf_2
   - zstd=1.5.2=h8a70e8d_2
+<<<<<<< HEAD
   - boost=1.74.0=py310h7c3ba0c_5
   - boost-cpp=1.74.0=h75c5d50_8
+=======
+>>>>>>> 43a4220416f92999fc0914dbe8c123acf9308b07
   - pip:
     - castxml==0.4.3
     - pygccxml==2.2.1
