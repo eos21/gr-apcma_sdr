@@ -35,6 +35,14 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 # Find gnuradio to get access to the cmake modules
 find_package(Gnuradio "3.10" REQUIRED)
 
+
+# For OpenMP
+find_package(OpenMP REQUIRED)
+if(OpenMP_FOUND)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 # Set the version information here
 set(VERSION_MAJOR 1)
 set(VERSION_API   0)

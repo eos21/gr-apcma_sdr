@@ -1,6 +1,6 @@
 
 // Compile command
-// g++ -I /home/haselab/miniconda3/envs/gr310/include/ -lfftw3f ./test.cc ../lib/kiss_fft.c
+// g++ -I /home/haselab/miniconda3/envs/gr310/include/ -lfftw3f ./fft_time_measure.cc ../lib/kiss_fft.c
 // Description
 // FFT ライブラリの処理時間計測のためのプログラム
 extern "C" {
@@ -23,7 +23,10 @@ int
 
     fftw_in  = (fftwf_complex *)fftwf_malloc( sizeof( fftwf_complex ) * N );
     fftw_out = (fftwf_complex *)fftwf_malloc( sizeof( fftwf_complex ) * N );
-    fftw_p   = fftwf_plan_dft_1d( N, fftw_in, fftw_out, FFTW_FORWARD, FFTW_MEASURE );
+
+    auto start = std::chrono::system_clock::now();    // 計測スタート時刻を保存
+    fftw_p     = fftwf_plan_dft_1d( N, fftw_in, fftw_out, FFTW_FORWARD, FFTW_MEASURE );
+    auto end   = std::chrono::system_clock::now();    // 計測終了時刻を保存
 
     kiss_fft_cpx *cx_in;     ///< input of the FFT
     kiss_fft_cpx *cx_out;    ///< output of the FFT
@@ -43,27 +46,27 @@ int
 
 
     const int times = 1000 * 1000;
-    auto      start = std::chrono::system_clock::now();    // 計測スタート時刻を保存
-    // for ( int i = 0; i < times; i++ ) {
-    //     for ( int ii = 0; ii < N; ii++ ) {
-    //         dechirped[ii]  = upchirp[ii] * downchirp[ii];
-    //         fftw_in[ii][0] = dechirped[ii].real();
-    //         fftw_in[ii][1] = dechirped[ii].imag();
-    //     }
-    //     fftwf_execute( fftw_p );
-    // }
-
+    // auto      start = std::chrono::system_clock::now();    // 計測スタート時刻を保存
     for ( int i = 0; i < times; i++ ) {
         for ( int ii = 0; ii < N; ii++ ) {
-            dechirped[ii] = upchirp[ii] * downchirp[ii];
-            cx_in[ii].r   = dechirped[ii].real();
-            cx_in[ii].i   = dechirped[ii].imag();
+            dechirped[ii]  = upchirp[ii] * downchirp[ii];
+            fftw_in[ii][0] = dechirped[ii].real();
+            fftw_in[ii][1] = dechirped[ii].imag();
         }
-        kiss_fft( cfg, cx_in, cx_out );
+        fftwf_execute( fftw_p );
     }
 
-    auto end  = std::chrono::system_clock::now();    // 計測終了時刻を保存
-    auto dur  = end - start;                         // 要した時間を計算
+    // for ( int i = 0; i < times; i++ ) {
+    //     for ( int ii = 0; ii < N; ii++ ) {
+    //         dechirped[ii] = upchirp[ii] * downchirp[ii];
+    //         cx_in[ii].r   = dechirped[ii].real();
+    //         cx_in[ii].i   = dechirped[ii].imag();
+    //     }
+    //     kiss_fft( cfg, cx_in, cx_out );
+    // }
+
+    // auto end  = std::chrono::system_clock::now();    // 計測終了時刻を保存
+    auto dur  = end - start;    // 要した時間を計算
     auto msec = std::chrono::duration_cast<std::chrono::milliseconds>( dur ).count();
     // 要した時間をミリ秒（1/1000秒）に変換して表示
     std::cout << msec << " milli sec \n";

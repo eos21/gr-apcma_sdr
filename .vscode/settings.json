@@ -69,5 +69,5 @@
         "valarray": "cpp",
         "variant": "cpp"
     },
-    "cmake.cmakePath": "/home/atsushi-n/miniconda3/envs/gr310-apcma/bin/cmake"
+    "cmake.cmakePath": "/home/haselab/miniconda3/envs/gr310/bin/cmake"
 }

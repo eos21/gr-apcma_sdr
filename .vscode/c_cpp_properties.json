@@ -9,7 +9,8 @@
             "defines": [],
             "intelliSenseMode": "linux-gcc-x64",
             "compilerPath": "~/miniconda3/envs/gr310-apcma/bin/cc",
-            "cppStandard": "c++20"
+            "cppStandard": "c++20",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4
