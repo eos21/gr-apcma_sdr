@@ -13,7 +13,6 @@ include(GrPlatform) #define LIB_SUFFIX
 
 list(APPEND apcma_sdr_sources
     apcma_rx_impl.cc
-    kiss_fft.c
 )
 
 set(apcma_sdr_sources "${apcma_sdr_sources}" PARENT_SCOPE)

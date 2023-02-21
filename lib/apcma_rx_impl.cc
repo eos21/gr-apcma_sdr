@@ -57,9 +57,6 @@ apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def
         m_number_of_bins, fftw_in, fftw_out, FFTW_BACKWARD, FFTW_ESTIMATE );
     build_ref_chirps( &m_upchirp[0], &m_downchirp[0], m_sf );
 
-    // prepare for kiss_fft
-    cx_in  = new kiss_fft_cpx[m_number_of_bins];
-    cx_out = new kiss_fft_cpx[m_number_of_bins];
 
     switch ( m_code_def ) {
         case 0:    // Andi-4pulse
@@ -142,43 +139,6 @@ void
     }
 }
 
-/// @brief 入力されたIQ sampleをDechirp +
-/// FFTしてthresholdを超えた周波数binのvectorをreturn
-/// @param samples
-/// @param ref_chirp
-/// @return bin_above_threshold
-bool
-    apcma_rx_impl::get_css_pulse_detect_kiss( const gr_complex* samples,
-                                              gr_complex*       ref_chirp ) {
-    float                   fft_mag[m_number_of_bins];
-    std::vector<gr_complex> dechirped( m_number_of_bins );
-
-    // Prepare for kiss FFT
-    kiss_fft_cfg cfg = kiss_fft_alloc( m_number_of_bins, 0, 0, 0 );
-
-    // Multiply with ideal downchirp
-    volk_32fc_x2_multiply_32fc( &dechirped[0], samples, ref_chirp, m_number_of_bins );
-    for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
-        cx_in[i].r = dechirped[i].real();
-        cx_in[i].i = dechirped[i].imag();
-    }
-    // do the FFT
-    kiss_fft( cfg, cx_in, cx_out );
-    bool             has_detected_pulse;
-    std::vector<int> bin_above_threshold;
-
-    // Get freq. offset above threshold
-    for ( uint32_t i = m_number_of_bins - m_sliding_width; i < m_number_of_bins; i++ ) {
-        uint32_t index = ( m_number_of_bins - ( m_sliding_width - 1 ) + i ) % m_number_of_bins;
-        fft_mag[index] = cx_out[index].r * cx_out[index].r + cx_out[index].i * cx_out[index].i;
-        if ( fft_mag[index] > m_threshold ) {
-            has_detected_pulse = true;
-        }
-    }
-    free( cfg );
-
-    return has_detected_pulse;
-}
 
 /// @brief 入力されたIQ sampleをDechirp +
 /// FFTしてthresholdを超えた周波数binのvectorをreturn
@@ -186,8 +146,8 @@ bool
 /// @param ref_chirp
 /// @return bin_above_threshold
 bool
-    apcma_rx_impl::get_css_pulse_detect_fftw( const gr_complex* samples,
-                                              gr_complex*       ref_chirp ) {
+    apcma_rx_impl::get_css_pulse_detect( const gr_complex* samples,
+                                         gr_complex*       ref_chirp ) {
     std::vector<gr_complex> dechirped( m_number_of_bins );
 
     // Multiply with ideal downchirp
@@ -269,7 +229,7 @@ int
         in_downed[i] = in[int( i * m_os_factor )];
     // Pulse detecting
     bool has_detected_pulse =
-        get_css_pulse_detect_fftw( &in_downed[0], &m_downchirp[0] );
+        get_css_pulse_detect( &in_downed[0], &m_downchirp[0] );
     if ( has_detected_pulse ) {
         pulse_train.set( m_pulse_train_length - 1 );
     }
@@ -277,16 +237,30 @@ int
 
     sliding_cnt++;
     if ( sliding_cnt == ( m_subslot_width / m_sliding_width ) ) {
+        // if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
+        //     for ( uint32_t i = 0; i < ( 1 << m_N_bits ); i++ ) {
+        //         if ( codeword_table[i].is_subset_of( pulse_train ) ) {
+        //             decoded_val.push_back( i );
+        //         }
+        //     }
+        // }
         if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
-            for ( uint32_t i = 0; i < ( 1 << m_N_bits ); i++ ) {
-                if ( codeword_table[i].is_subset_of( pulse_train ) ) {
-                    decoded_val.push_back( i );
+#pragma omp parallel
+            {
+#pragma omp for
+                for ( int i = 0; i < ( 1 << m_N_bits ); i++ ) {
+#pragma omp critical( crit_cout )
+                    {
+                        if ( codeword_table[i].is_subset_of( pulse_train ) ) {
+                            decoded_val.push_back( i );
+                        }
+                    }
                 }
+#pragma omp barrier
             }
         }
-
         for ( int i = 0; i < decoded_val.size(); i++ ) {
-            printf( "Slot: %d,\tData: %d\n", subslot_cnt, decoded_val[i] );
+            printf( "%d\n", decoded_val[i] );
         }
         sliding_cnt = 0;
         pulse_train >>= 1;

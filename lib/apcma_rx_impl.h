@@ -21,9 +21,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
-extern "C" {
-#include "kiss_fft.h"
-}
 
 namespace gr {
 namespace apcma_sdr {
@@ -70,9 +67,6 @@ class apcma_rx_impl: public apcma_rx {
     boost::dynamic_bitset<>              pulse_train;             ///< Pulse train which shift
     std::vector<boost::dynamic_bitset<>> codeword_table;          ///< Codeword table
 
-    kiss_fft_cpx* cx_in;     ///< input of the FFT
-    kiss_fft_cpx* cx_out;    ///< output of the FFT
-
     fftwf_complex* fftw_in;
     fftwf_complex* fftw_out;
     fftwf_plan     fftw_p;
@@ -81,10 +75,8 @@ class apcma_rx_impl: public apcma_rx {
     uint64_t sliding_cnt;
 
     void             make_codeword_table( bool do_print );
-    bool             get_css_pulse_detect_kiss( const gr_complex* samples,
-                                                gr_complex*       ref_chirp );
-    bool             get_css_pulse_detect_fftw( const gr_complex* samples,
-                                                gr_complex*       ref_chirp );
+    bool             get_css_pulse_detect( const gr_complex* samples,
+                                           gr_complex*       ref_chirp );
     std::vector<int> shift_register( std::vector<int> fft_result );
 
   public:
