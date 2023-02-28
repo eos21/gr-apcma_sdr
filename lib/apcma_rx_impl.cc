@@ -60,27 +60,27 @@ apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def
 
     switch ( m_code_def ) {
         case 0:    // Andi-4pulse
-            m_length_c = std::pow( 2, m_N_bits + 1 ) + 5;
+            m_length_c = ( 1u << ( m_N_bits ) ) * 2 + 5;
             m_N_pulses = 4;    // パルスの数を定義
             break;
         case 1:    // PaDi-4pulse(1)
-            m_length_c = std::pow( 2, m_N_bits + 1 ) + 5;
+            m_length_c = ( 1u << ( m_N_bits ) ) * 2 + 5;
             m_N_pulses = 4;    // パルスの数を定義
             break;
         case 2:    // PaDi-4pulse(2)
-            m_length_c = std::pow( 2, m_N_bits + 1 ) + 5;
+            m_length_c = ( 1u << ( m_N_bits ) ) * 2 + 5;
             m_N_pulses = 4;    // パルスの数を定義
             break;
         case 3:    // PaDi-4pulse(3)
-            m_length_c = std::pow( 2, m_N_bits + 1 ) + 6;
+            m_length_c = ( 1u << ( m_N_bits ) ) * 2 + 6;
             m_N_pulses = 4;    // パルスの数を定義
             break;
         case 4:    // Andi-5pulse
-            m_length_c = std::pow( 2, m_N_bits ) * 3 + 5;
+            m_length_c = ( 1u << ( m_N_bits ) ) * 3 + 5;
             m_N_pulses = 5;    // パルスの数を定義
             break;
         case 5:    // PaDi-5pulse
-            m_length_c = std::pow( 2, m_N_bits ) * 3 + 6;
+            m_length_c = ( 1u << ( m_N_bits ) ) * 3 + 6;
             m_N_pulses = 5;    // パルスの数を定義
         default:
             std::cerr << "Error occured. Code definition doesn't match any of them."
@@ -162,58 +162,29 @@ bool
     // Get pulse detection if power is above threshold
     std::vector<int> bin_above_threshold;
     float            fft_mag[m_number_of_bins];
-    bool             has_detected_pulse = false;
+    bool             is_peak_bin[m_number_of_bins] = { false };
+    bool             has_detected_pulse            = false;
+    // Magnitudeを計算
+    for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
+        fft_mag[i] = fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1];
+    }
 
+    // ピークを検出
+    for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
+        if ( fft_mag[i] > fft_mag[( i + 1 ) % m_number_of_bins] && fft_mag[i] > fft_mag[( i - 1 ) % m_number_of_bins] && fft_mag[i] > m_threshold ) {
+            is_peak_bin[i] = true;
+        }
+    }
+
+    // ピークのbinが一定の範囲内でなっていればパルス検知をtrueにする
     for ( uint32_t i = 0; i < m_sliding_width; i++ ) {
         uint32_t index = ( m_number_of_bins - ( m_sliding_width - 1 ) + i ) % m_number_of_bins;
-        fft_mag[index] = fftw_out[index][0] * fftw_out[index][0] + fftw_out[index][1] * fftw_out[index][1];
-        if ( fft_mag[index] > m_threshold ) {
+        if ( is_peak_bin[index] || is_peak_bin[( ( index == 0 ) ? 0 : index - 1 )] || is_peak_bin[( ( index == m_number_of_bins - 1 ) ? m_number_of_bins - 1 : index + 1 )] ) {
             has_detected_pulse = true;
         }
     }
     return has_detected_pulse;
 }
-
-
-std::vector<int>
-    apcma_rx_impl::shift_register( std::vector<int> fft_result ) {
-    std::vector<int> decoded_val;
-    // 検出した周波数binから必要なbinがある場合
-    // 必要なbinは2^sf-(m_sliding_width-1), ... , 2^sf-1, 2^sf(=0)
-    bool             exist_needed_bins = false;
-    for ( uint32_t i = 0; i < m_sliding_width; i++ ) {
-        if ( std::binary_search( fft_result.begin(),
-                                 fft_result.end(),
-                                 ( m_number_of_bins - ( m_sliding_width - 1 ) + i ) % m_number_of_bins ) ) {
-            exist_needed_bins = true;
-            break;
-        }
-    }
-    if ( sliding_cnt == 0 ) {
-        pulse_train >>= 1;
-    }
-    if ( exist_needed_bins ) {
-        pulse_train.set( pulse_train.size() - 1 );
-
-        if ( pulse_train[0] ) {
-#pragma omp parallel
-            {
-#pragma omp for
-                for ( int i = 0; i < ( 1 << m_N_bits ); i++ ) {
-#pragma omp critical( crit_cout )
-                    {
-                        if ( codeword_table[i].is_subset_of( pulse_train ) ) {
-                            decoded_val.push_back( i );
-                        }
-                    }
-                }
-#pragma omp barrier
-            }
-        }
-    }
-
-    return decoded_val;
-}    // namespace apcma_sdr
 
 
 int
@@ -237,13 +208,6 @@ int
 
     sliding_cnt++;
     if ( sliding_cnt == ( m_subslot_width / m_sliding_width ) ) {
-        // if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
-        //     for ( uint32_t i = 0; i < ( 1 << m_N_bits ); i++ ) {
-        //         if ( codeword_table[i].is_subset_of( pulse_train ) ) {
-        //             decoded_val.push_back( i );
-        //         }
-        //     }
-        // }
         if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
 #pragma omp parallel
             {
@@ -258,6 +222,8 @@ int
                 }
 #pragma omp barrier
             }
+            // if ( decoded_val.size() == 0 )
+            //     std::cout << pulse_train << std::endl;
         }
         for ( int i = 0; i < decoded_val.size(); i++ ) {
             printf( "%d\n", decoded_val[i] );

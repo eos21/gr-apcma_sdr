@@ -73,11 +73,11 @@ class apcma_rx_impl: public apcma_rx {
 
     uint64_t subslot_cnt;    ///< Number of slots already received
     uint64_t sliding_cnt;
+    uint32_t previous_decoded_val;
 
-    void             make_codeword_table( bool do_print );
-    bool             get_css_pulse_detect( const gr_complex* samples,
-                                           gr_complex*       ref_chirp );
-    std::vector<int> shift_register( std::vector<int> fft_result );
+    void make_codeword_table( bool do_print );
+    bool get_css_pulse_detect( const gr_complex* samples,
+                               gr_complex*       ref_chirp );
 
   public:
     apcma_rx_impl( int   sf,

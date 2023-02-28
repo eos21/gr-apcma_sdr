@@ -13,8 +13,8 @@
 /* If manual edits are made, the following tags should be modified accordingly.    */
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
-/* BINDTOOL_HEADER_FILE(apcma_rx.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(eaa3f71664387a1f32c58d17c4d7f607)                     */
+/* BINDTOOL_HEADER_FILE(apcma_tx.h)                                        */
+/* BINDTOOL_HEADER_FILE_HASH(362218f2f47ff80e594f77572da525e5)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -23,27 +23,28 @@
 
 namespace py = pybind11;
 
-#include <gnuradio/apcma_sdr/apcma_rx.h>
+#include <gnuradio/apcma_sdr/apcma_tx.h>
 // pydoc.h is automatically generated in the build directory
-#include <apcma_rx_pydoc.h>
+#include <apcma_tx_pydoc.h>
 
 void
-    bind_apcma_rx( py::module& m ) {
-    using apcma_rx = ::gr::apcma_sdr::apcma_rx;
+    bind_apcma_tx( py::module& m ) {
+    using apcma_tx = ::gr::apcma_sdr::apcma_tx;
 
 
-    py::class_<apcma_rx, gr::block, gr::basic_block, std::shared_ptr<apcma_rx>>( m, "apcma_rx", D( apcma_rx ) )
+    py::class_<apcma_tx, gr::block, gr::basic_block, std::shared_ptr<apcma_tx>>( m, "apcma_tx", D( apcma_tx ) )
 
-        .def( py::init( &apcma_rx::make ),
+        .def( py::init( &apcma_tx::make ),
               py::arg( "sf" ),
               py::arg( "samp_rate" ),
               py::arg( "os_factor" ),
               py::arg( "code_def" ),
               py::arg( "N_bits" ),
               py::arg( "subslot_width" ),
-              py::arg( "sliding_width" ),
-              py::arg( "threshold" ),
-              D( apcma_rx, make ) )
+              py::arg( "start_var" ),
+              py::arg( "end_var" ),
+              py::arg( "number_of_sending" ),
+              D( apcma_tx, make ) )
 
 
         ;

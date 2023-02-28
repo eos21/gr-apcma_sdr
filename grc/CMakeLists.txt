@@ -7,5 +7,6 @@
 #
 
 install(FILES
-    apcma_sdr_apcma_rx.block.yml DESTINATION share/gnuradio/grc/blocks
+    apcma_sdr_apcma_rx.block.yml
+    apcma_sdr_apcma_tx.block.yml DESTINATION share/gnuradio/grc/blocks
 )

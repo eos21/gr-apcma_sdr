@@ -22,6 +22,7 @@ namespace py = pybind11;
 /**************************************/
 // BINDING_FUNCTION_PROTOTYPES(
     void bind_apcma_rx(py::module& m);
+    void bind_apcma_tx(py::module& m);
 // ) END BINDING_FUNCTION_PROTOTYPES
 
 
@@ -51,5 +52,6 @@ PYBIND11_MODULE(apcma_sdr_python, m)
     /**************************************/
     // BINDING_FUNCTION_CALLS(
     bind_apcma_rx(m);
+    bind_apcma_tx(m);
     // ) END BINDING_FUNCTION_CALLS
 }

@@ -11,5 +11,6 @@
 ########################################################################
 install(FILES
     api.h
-    apcma_rx.h DESTINATION include/gnuradio/apcma_sdr
+    apcma_rx.h
+    apcma_tx.h DESTINATION include/gnuradio/apcma_sdr
 )

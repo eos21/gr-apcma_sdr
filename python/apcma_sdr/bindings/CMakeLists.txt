@@ -29,7 +29,8 @@ include(GrPybind)
 ########################################################################
 
 list(APPEND apcma_sdr_python_files
-    apcma_rx_python.cc python_bindings.cc)
+    apcma_rx_python.cc
+    apcma_tx_python.cc python_bindings.cc)
 
 GR_PYBIND_MAKE_OOT(apcma_sdr
    ../../..

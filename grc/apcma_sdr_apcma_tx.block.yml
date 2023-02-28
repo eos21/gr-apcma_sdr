@@ -1,0 +1,40 @@
+id: apcma_sdr_apcma_tx
+label: apcma tx
+category: '[Apcma_sdr]'
+templates:
+  imports: from gnuradio import apcma_sdr
+  make: apcma_sdr.apcma_tx(${sf}, ${samp_rate}, ${os_factor}, ${code_def}, ${N_bits},
+    ${subslot_width}, ${start_var}, ${end_var}, ${number_of_sending})
+parameters:
+- id: sf
+  label: Spreading factor
+  dtype: int
+- id: samp_rate
+  label: Sampling rate
+  dtype: int
+- id: os_factor
+  label: Over sampling factor
+  dtype: int
+- id: code_def
+  label: Code definition
+  dtype: int
+- id: N_bits
+  label: Number of bits
+  dtype: int
+- id: subslot_width
+  label: Subslot width
+  dtype: int
+- id: start_var
+  label: Start variable
+  dtype: int
+- id: end_var
+  label: End variable
+  dtype: int
+- id: number_of_sending
+  label: Number of sending time
+  dtype: int
+outputs:
+- label: out
+  domain: stream
+  dtype: complex
+file_format: 1

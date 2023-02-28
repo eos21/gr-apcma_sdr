@@ -1,0 +1,1 @@
+{"ExpName": "SW_changed", "sf": 7, "bw": 250000, "samp_rate": 250000, "os_factor": 1, "tx_gain": 70, "threshold": 0.1, "transmission_period": 1000, "number_of_tx": 6, "code_def": 4, "subslot_width": 16, "sliding_width": 2, "number_of_bits": 12, "number_of_transmissions": 1000, "exp_index": 3}

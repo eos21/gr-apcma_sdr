@@ -15,10 +15,10 @@
  */
 
 
-static const char *__doc_gr_apcma_sdr_apcma_rx = R"doc()doc";
+static const char *__doc_gr_apcma_sdr_apcma_tx = R"doc()doc";
 
 
-static const char *__doc_gr_apcma_sdr_apcma_rx_apcma_rx = R"doc()doc";
+static const char *__doc_gr_apcma_sdr_apcma_tx_apcma_tx = R"doc()doc";
 
 
-static const char *__doc_gr_apcma_sdr_apcma_rx_make = R"doc()doc";
+static const char *__doc_gr_apcma_sdr_apcma_tx_make = R"doc()doc";

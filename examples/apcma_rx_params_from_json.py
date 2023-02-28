@@ -20,6 +20,7 @@ from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio import uhd
 import time
+import json
 
 
 class apcma_rx(gr.top_block):
@@ -28,17 +29,22 @@ class apcma_rx(gr.top_block):
         gr.top_block.__init__(
             self, "APCMA receiving program", catch_exceptions=True)
 
+        # Load parameters from parameters.json
+        filepath_of_parameters = "/home/haselab/gr-apcma_sdr/examples/parameters.json"
+        with open(filepath_of_parameters, mode='rt', encoding='utf-8') as f:
+            parameters = json.load(f)
+
         ##################################################
         # Variables
         ##################################################
-        self.threshold = threshold = 0.1
-        self.subslot_width = subslot_width = 8
-        self.sliding_width = sliding_width = 2
-        self.sf = sf = 7
-        self.samp_rate = samp_rate = 250000
-        self.os_factor = os_factor = 1
-        self.number_of_bits = number_of_bits = 12
-        self.code_definition = code_definition = 4
+        self.threshold = threshold = parameters['threshold']
+        self.subslot_width = subslot_width = parameters['subslot_width']
+        self.sliding_width = sliding_width = parameters['sliding_width']
+        self.sf = sf = parameters['sf']
+        self.samp_rate = samp_rate = parameters['samp_rate']
+        self.os_factor = os_factor = parameters['os_factor']
+        self.number_of_bits = number_of_bits = parameters['number_of_bits']
+        self.code_definition = code_definition = parameters['code_def']
 
         ##################################################
         # Blocks

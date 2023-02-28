@@ -19,9 +19,8 @@ namespace apcma_sdr {
  * \ingroup apcma_sdr
  *
  */
-class APCMA_SDR_API apcma_rx : virtual public gr::block
-{
-public:
+class APCMA_SDR_API apcma_rx: virtual public gr::block {
+  public:
     typedef std::shared_ptr<apcma_rx> sptr;
 
     /*!
@@ -32,17 +31,17 @@ public:
      * class. apcma_sdr::apcma_rx::make is the public interface for
      * creating new instances.
      */
-    static sptr make(int sf,
-                     int samp_rate,
-                     int os_factor,
-                     int code_def,
-                     int N_bits,
-                     int subslot_width,
-                     int sliding_width,
-                     float threshold);
+    static sptr make( int   sf,
+                      int   samp_rate,
+                      int   os_factor,
+                      int   code_def,
+                      int   N_bits,
+                      int   subslot_width,
+                      int   sliding_width,
+                      float threshold );
 };
 
-} // namespace apcma_sdr
-} // namespace gr
+}    // namespace apcma_sdr
+}    // namespace gr
 
 #endif /* INCLUDED_APCMA_SDR_APCMA_RX_H */
