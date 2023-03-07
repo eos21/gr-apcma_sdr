@@ -100,11 +100,18 @@ apcma_rx_impl::~apcma_rx_impl() {
     fftwf_destroy_plan( fftw_p );
 }
 
+
 void
     apcma_rx_impl::forecast( int noutput_items, gr_vector_int& ninput_items_required ) {
     ninput_items_required[0] = m_os_factor * 1 << ( m_sf + 2 );
 }
 
+
+/**
+ * @brief APCMAのコードワードを作る
+ * 
+ * @param do_print 標準出力にコードワードの一覧を表示させるか
+ */
 void
     apcma_rx_impl::make_codeword_table( bool do_print ) {
     /*
@@ -140,79 +147,12 @@ void
 }
 
 
-// /// FFTしてthresholdを超えた周波数binのvectorをreturn
-// /// @param samples
-// /// @param ref_chirp
-// /// @return has_detected_pulse
-// ///
-// bool
-//     apcma_rx_impl::get_css_pulse_detect( const gr_complex* samples,
-//                                          gr_complex*       ref_chirp ) {
-//     bool has_detected_pulse = false;    // このsubslotにパルスの立ち上がりが存在するか否か
-//     int  temp               = 0;
-//     for ( uint32_t sliding_cnt = 0; sliding_cnt < m_subslot_width; sliding_cnt += m_sliding_width ) {
-//         std::vector<gr_complex> dechirped( m_number_of_bins );
-//         // Multiply with ideal downchirp
-//         volk_32fc_x2_multiply_32fc( &dechirped[0], &samples[sliding_cnt], ref_chirp, m_number_of_bins );
-
-//         // FFT using FFTW3 library
-//         for ( uint32_t i = 0u; i < m_number_of_bins; i++ ) {
-//             fftw_in[i][0] = dechirped[i].imag();
-//             fftw_in[i][1] = dechirped[i].real();
-//         }
-
-//         printf( "in:%f\t", fftw_in[127][1] );
-//         fftwf_execute( fftw_p );
-//         printf( "out:%f\n", fftw_out[127][1] );
-//         float fft_mag[m_number_of_bins];
-//         // Magnitudeを計算
-//         for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
-//             fft_mag[i] = fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1];
-//         }
-//         // 長さ3の窓の平均値filter
-//         float fft_mag_filtered[m_number_of_bins];
-//         fft_mag_filtered[0] = ( fft_mag[0] + fft_mag[1] ) / 2;
-//         for ( uint32_t i = 1; i < m_number_of_bins - 1; i++ ) {
-//             fft_mag_filtered[i] = ( fft_mag[i - 1] + fft_mag[i] + fft_mag[i + 1] ) / 3;
-//         }
-//         fft_mag_filtered[m_number_of_bins - 1] = ( fft_mag[m_number_of_bins - 2] + fft_mag[m_number_of_bins - 1] ) / 2;
-
-
-//         // ピークを検出
-//         bool is_peak_bin[m_number_of_bins] = { false };
-//         for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
-//             bool is_extremum = fft_mag_filtered[i] > fft_mag_filtered[( i + 1 ) % m_number_of_bins]
-//                 && fft_mag_filtered[i] > fft_mag_filtered[( i - 1 ) % m_number_of_bins];
-//             bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold );
-
-//             if ( is_extremum && is_above_threshold ) {
-//                 is_peak_bin[i] = true;
-//                 // printf( "%d\n", subslot_cnt );
-//             }
-//         }
-
-
-//         // subslotに対応した周波数binのいずれかがtrueか否か
-//         for ( uint32_t i = 0; i < m_subslot_width - sliding_cnt; i++ ) {
-//             if ( is_peak_bin[( m_number_of_bins - i ) % m_number_of_bins] ) {
-//                 has_detected_pulse = true;
-//             }
-//         }
-
-//         if ( has_detected_pulse ) {
-//             break;
-//         }
-//     }
-
-//     return has_detected_pulse;
-// }
-
-
-/// @brief 入力されたIQ sampleをDechirp +
-/// FFTしてthresholdを超えた周波数binのvectorをreturn
-/// @param samples
-/// @param ref_chirp
-/// @return bin_above_threshold
+/**
+ * @brief 入力信号に対しdechirp->FFT->power取得->フィルター->ピーク検出を行う
+ * @param samples 入力信号
+ * @param ref_chirp ダウンチャープ
+ * @param is_peak_bin ポインタ渡しでpulse_detection()に返す、どの周波数binに電力ピークがあるかを示す
+ */
 void
     apcma_rx_impl::get_freq_power_peak( const gr_complex* samples,
                                         const gr_complex* ref_chirp,
@@ -235,28 +175,36 @@ void
 
     // 長さ3の窓の平均値filter
     float fft_mag_filtered[m_number_of_bins];
-    fft_mag_filtered[0] = ( fft_mag[0] + fft_mag[1] ) / 2;
+    fft_mag_filtered[0] = ( fft_mag[0] + fft_mag[1] ) / 2; // i=0のときの例外処理
     for ( uint32_t i = 1; i < m_number_of_bins - 1; i++ ) {
         fft_mag_filtered[i] = ( fft_mag[i - 1] + fft_mag[i] + fft_mag[i + 1] ) / 3;
     }
-    fft_mag_filtered[m_number_of_bins - 1] = ( fft_mag[m_number_of_bins - 2] + fft_mag[m_number_of_bins - 1] ) / 2;
+    fft_mag_filtered[m_number_of_bins - 1] = ( fft_mag[m_number_of_bins - 2] + fft_mag[m_number_of_bins - 1] ) / 2; // i=m_number_of_binsのときの例外処理
 
     // ピークを検出
     for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
+        // 極値か否かを判断
         bool is_extremum = fft_mag_filtered[i] > fft_mag_filtered[( i + 1 ) % m_number_of_bins]
             && fft_mag_filtered[i] > fft_mag_filtered[( i - 1 ) % m_number_of_bins];
-        bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold );
-        // if ( is_above_threshold )
+        bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold ); // threholdを超えているか判断
         if ( is_extremum && is_above_threshold ) {
             is_peak_bin[i] = true;
         }
     }
 }
 
+
+/**
+ * @brief 該当のsubslotにパルスの立ち上がりが存在するかを返す関数
+ * 
+ * @return true subslot is on
+ * @return false subslot is off
+ */
 bool
     apcma_rx_impl::pulse_detection() {
     bool has_detected_pulse = false;
     for ( uint32_t sliding_cnt = 0; sliding_cnt < ( m_subslot_width / m_sliding_width ); sliding_cnt++ ) {
+        // ピークが表れる周波数binを取得
         bool is_peak_bin[m_number_of_bins] = { false };
         get_freq_power_peak( &in_downed[sliding_cnt * m_sliding_width], &m_downchirp[0], &is_peak_bin[0] );
         // subslotに対応した周波数binのいずれかがtrueか否か
@@ -269,6 +217,7 @@ bool
     }
     return has_detected_pulse;
 }
+
 
 int
     apcma_rx_impl::general_work( int                        noutput_items,
