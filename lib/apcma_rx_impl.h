@@ -76,8 +76,10 @@ class apcma_rx_impl: public apcma_rx {
     uint32_t previous_decoded_val;
 
     void make_codeword_table( bool do_print );
-    bool get_css_pulse_detect( const gr_complex* samples,
-                               gr_complex*       ref_chirp );
+    void get_freq_power_peak( const gr_complex* samples,
+                              const gr_complex* ref_chirp,
+                              bool*             is_peak_bin );
+    bool pulse_detection();
 
   public:
     apcma_rx_impl( int   sf,

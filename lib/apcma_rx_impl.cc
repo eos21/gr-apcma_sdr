@@ -54,7 +54,7 @@ apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def
     fftw_in  = (fftwf_complex*)fftwf_malloc( sizeof( fftwf_complex ) * m_number_of_bins );
     fftw_out = (fftwf_complex*)fftwf_malloc( sizeof( fftwf_complex ) * m_number_of_bins );
     fftw_p   = fftwf_plan_dft_1d(
-        m_number_of_bins, fftw_in, fftw_out, FFTW_BACKWARD, FFTW_ESTIMATE );
+        m_number_of_bins, fftw_in, fftw_out, FFTW_BACKWARD, FFTW_MEASURE );
     build_ref_chirps( &m_upchirp[0], &m_downchirp[0], m_sf );
 
 
@@ -140,52 +140,135 @@ void
 }
 
 
+// /// FFTしてthresholdを超えた周波数binのvectorをreturn
+// /// @param samples
+// /// @param ref_chirp
+// /// @return has_detected_pulse
+// ///
+// bool
+//     apcma_rx_impl::get_css_pulse_detect( const gr_complex* samples,
+//                                          gr_complex*       ref_chirp ) {
+//     bool has_detected_pulse = false;    // このsubslotにパルスの立ち上がりが存在するか否か
+//     int  temp               = 0;
+//     for ( uint32_t sliding_cnt = 0; sliding_cnt < m_subslot_width; sliding_cnt += m_sliding_width ) {
+//         std::vector<gr_complex> dechirped( m_number_of_bins );
+//         // Multiply with ideal downchirp
+//         volk_32fc_x2_multiply_32fc( &dechirped[0], &samples[sliding_cnt], ref_chirp, m_number_of_bins );
+
+//         // FFT using FFTW3 library
+//         for ( uint32_t i = 0u; i < m_number_of_bins; i++ ) {
+//             fftw_in[i][0] = dechirped[i].imag();
+//             fftw_in[i][1] = dechirped[i].real();
+//         }
+
+//         printf( "in:%f\t", fftw_in[127][1] );
+//         fftwf_execute( fftw_p );
+//         printf( "out:%f\n", fftw_out[127][1] );
+//         float fft_mag[m_number_of_bins];
+//         // Magnitudeを計算
+//         for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
+//             fft_mag[i] = fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1];
+//         }
+//         // 長さ3の窓の平均値filter
+//         float fft_mag_filtered[m_number_of_bins];
+//         fft_mag_filtered[0] = ( fft_mag[0] + fft_mag[1] ) / 2;
+//         for ( uint32_t i = 1; i < m_number_of_bins - 1; i++ ) {
+//             fft_mag_filtered[i] = ( fft_mag[i - 1] + fft_mag[i] + fft_mag[i + 1] ) / 3;
+//         }
+//         fft_mag_filtered[m_number_of_bins - 1] = ( fft_mag[m_number_of_bins - 2] + fft_mag[m_number_of_bins - 1] ) / 2;
+
+
+//         // ピークを検出
+//         bool is_peak_bin[m_number_of_bins] = { false };
+//         for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
+//             bool is_extremum = fft_mag_filtered[i] > fft_mag_filtered[( i + 1 ) % m_number_of_bins]
+//                 && fft_mag_filtered[i] > fft_mag_filtered[( i - 1 ) % m_number_of_bins];
+//             bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold );
+
+//             if ( is_extremum && is_above_threshold ) {
+//                 is_peak_bin[i] = true;
+//                 // printf( "%d\n", subslot_cnt );
+//             }
+//         }
+
+
+//         // subslotに対応した周波数binのいずれかがtrueか否か
+//         for ( uint32_t i = 0; i < m_subslot_width - sliding_cnt; i++ ) {
+//             if ( is_peak_bin[( m_number_of_bins - i ) % m_number_of_bins] ) {
+//                 has_detected_pulse = true;
+//             }
+//         }
+
+//         if ( has_detected_pulse ) {
+//             break;
+//         }
+//     }
+
+//     return has_detected_pulse;
+// }
+
+
 /// @brief 入力されたIQ sampleをDechirp +
 /// FFTしてthresholdを超えた周波数binのvectorをreturn
 /// @param samples
 /// @param ref_chirp
 /// @return bin_above_threshold
-bool
-    apcma_rx_impl::get_css_pulse_detect( const gr_complex* samples,
-                                         gr_complex*       ref_chirp ) {
+void
+    apcma_rx_impl::get_freq_power_peak( const gr_complex* samples,
+                                        const gr_complex* ref_chirp,
+                                        bool*             is_peak_bin ) {
     std::vector<gr_complex> dechirped( m_number_of_bins );
-
     // Multiply with ideal downchirp
     volk_32fc_x2_multiply_32fc( &dechirped[0], samples, ref_chirp, m_number_of_bins );
+
     // FFT using FFTW3 library
     for ( uint32_t i = 0u; i < m_number_of_bins; i++ ) {
         fftw_in[i][0] = dechirped[i].imag();
         fftw_in[i][1] = dechirped[i].real();
     }
-
     fftwf_execute( fftw_p );
-    // Get pulse detection if power is above threshold
-    std::vector<int> bin_above_threshold;
-    float            fft_mag[m_number_of_bins];
-    bool             is_peak_bin[m_number_of_bins] = { false };
-    bool             has_detected_pulse            = false;
     // Magnitudeを計算
+    float fft_mag[m_number_of_bins];
     for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
         fft_mag[i] = fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1];
     }
 
+    // 長さ3の窓の平均値filter
+    float fft_mag_filtered[m_number_of_bins];
+    fft_mag_filtered[0] = ( fft_mag[0] + fft_mag[1] ) / 2;
+    for ( uint32_t i = 1; i < m_number_of_bins - 1; i++ ) {
+        fft_mag_filtered[i] = ( fft_mag[i - 1] + fft_mag[i] + fft_mag[i + 1] ) / 3;
+    }
+    fft_mag_filtered[m_number_of_bins - 1] = ( fft_mag[m_number_of_bins - 2] + fft_mag[m_number_of_bins - 1] ) / 2;
+
     // ピークを検出
     for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
-        if ( fft_mag[i] > fft_mag[( i + 1 ) % m_number_of_bins] && fft_mag[i] > fft_mag[( i - 1 ) % m_number_of_bins] && fft_mag[i] > m_threshold ) {
+        bool is_extremum = fft_mag_filtered[i] > fft_mag_filtered[( i + 1 ) % m_number_of_bins]
+            && fft_mag_filtered[i] > fft_mag_filtered[( i - 1 ) % m_number_of_bins];
+        bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold );
+        // if ( is_above_threshold )
+        if ( is_extremum && is_above_threshold ) {
             is_peak_bin[i] = true;
         }
     }
+}
 
-    // ピークのbinが一定の範囲内でなっていればパルス検知をtrueにする
-    for ( uint32_t i = 0; i < m_sliding_width; i++ ) {
-        uint32_t index = ( m_number_of_bins - ( m_sliding_width - 1 ) + i ) % m_number_of_bins;
-        if ( is_peak_bin[index] || is_peak_bin[( ( index == 0 ) ? 0 : index - 1 )] || is_peak_bin[( ( index == m_number_of_bins - 1 ) ? m_number_of_bins - 1 : index + 1 )] ) {
-            has_detected_pulse = true;
+bool
+    apcma_rx_impl::pulse_detection() {
+    bool has_detected_pulse = false;
+    for ( uint32_t sliding_cnt = 0; sliding_cnt < ( m_subslot_width / m_sliding_width ); sliding_cnt++ ) {
+        bool is_peak_bin[m_number_of_bins] = { false };
+        get_freq_power_peak( &in_downed[sliding_cnt * m_sliding_width], &m_downchirp[0], &is_peak_bin[0] );
+        // subslotに対応した周波数binのいずれかがtrueか否か
+        for ( uint32_t i = 0; i < m_sliding_width; i++ ) {
+            uint32_t index = ( m_number_of_bins - ( m_sliding_width - 1 ) + i ) % m_number_of_bins;
+            if ( is_peak_bin[index] ) {
+                has_detected_pulse = true;
+            }
         }
     }
     return has_detected_pulse;
 }
-
 
 int
     apcma_rx_impl::general_work( int                        noutput_items,
@@ -196,47 +279,41 @@ int
 
     std::vector<int> decoded_val;
     // Down sampling
-    for ( uint32_t i = 0; i < m_number_of_bins; i++ )
+    for ( uint32_t i = 0; i < m_number_of_bins * 2; i++ )
         in_downed[i] = in[int( i * m_os_factor )];
+
     // Pulse detecting
-    bool has_detected_pulse =
-        get_css_pulse_detect( &in_downed[0], &m_downchirp[0] );
-    if ( has_detected_pulse ) {
+    bool is_subslot_on = pulse_detection();
+    if ( is_subslot_on ) {
         pulse_train.set( m_pulse_train_length - 1 );
     }
 
-
-    sliding_cnt++;
-    if ( sliding_cnt == ( m_subslot_width / m_sliding_width ) ) {
-        if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
+    //shift register
+    if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
 #pragma omp parallel
-            {
+        {
 #pragma omp for
-                for ( int i = 0; i < ( 1 << m_N_bits ); i++ ) {
+            for ( int i = 0; i < ( 1 << m_N_bits ); i++ ) {
 #pragma omp critical( crit_cout )
-                    {
-                        if ( codeword_table[i].is_subset_of( pulse_train ) ) {
-                            decoded_val.push_back( i );
-                        }
+                {
+                    if ( codeword_table[i].is_subset_of( pulse_train ) ) {
+                        decoded_val.push_back( i );
                     }
                 }
-#pragma omp barrier
             }
-            // if ( decoded_val.size() == 0 )
-            //     std::cout << pulse_train << std::endl;
+#pragma omp barrier
         }
-        for ( int i = 0; i < decoded_val.size(); i++ ) {
-            printf( "%d\n", decoded_val[i] );
-        }
-        sliding_cnt = 0;
-        pulse_train >>= 1;
-        subslot_cnt++;
+    }
+    pulse_train >>= 1;
+
+    // print decoded value
+    for ( int i = 0; i < decoded_val.size(); i++ ) {
+        printf( "%d\n", decoded_val[i] );
     }
 
-
-    consume_each( m_sliding_width );
-    return m_sliding_width;
+    subslot_cnt++;
+    consume_each( m_subslot_width );
+    return m_subslot_width;
 }
-
 }    // namespace apcma_sdr
 } /* namespace gr */

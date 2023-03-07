@@ -65,6 +65,17 @@ inline void
     //     downchirp[n] = gr_complex(0.9f, 0.0f)*gr_expj(-2.0 * M_PI * (n*n/(2*N)-0.5*n));
     // }
 }
+
+inline bool
+    any_of_bool_array( bool* bool_array, int length_of_array ) {
+    for ( int i = 0; i < length_of_array; i++ ) {
+        if ( bool_array[i] ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 }    // namespace apcma_sdr
 }    // namespace gr
 #endif /* INCLUDED_UTILITIES_H */
