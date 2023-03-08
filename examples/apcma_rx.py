@@ -57,7 +57,7 @@ class apcma_rx(gr.top_block):
         self.uhd_usrp_source_0.set_antenna("RX2", 0)
         self.uhd_usrp_source_0.set_bandwidth((samp_rate / os_factor), 0)
         self.uhd_usrp_source_0.set_gain(50, 0)
-        self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2)))
+        self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2))*os_factor)
         self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold)
 
 
