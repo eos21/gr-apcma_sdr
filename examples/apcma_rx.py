@@ -31,11 +31,11 @@ class apcma_rx(gr.top_block):
         # Variables
         ##################################################
         self.threshold = threshold = 0.1
-        self.subslot_width = subslot_width = 128
-        self.sliding_width = sliding_width = 2
-        self.sf = sf = 7
-        self.samp_rate = samp_rate = 250000
-        self.os_factor = os_factor = 1
+        self.subslot_width = subslot_width = 2**12
+        self.sliding_width = sliding_width = 32
+        self.sf = sf = 12
+        self.samp_rate = samp_rate = 200000
+        self.os_factor = os_factor = 2
         self.number_of_bits = number_of_bits = 12
         self.code_definition = code_definition = 4
 
@@ -53,11 +53,11 @@ class apcma_rx(gr.top_block):
         self.uhd_usrp_source_0.set_samp_rate(samp_rate)
         # No synchronization enforced.
 
-        self.uhd_usrp_source_0.set_center_freq(920e6, 0)
+        self.uhd_usrp_source_0.set_center_freq(922.8e6, 0)
         self.uhd_usrp_source_0.set_antenna("RX2", 0)
         self.uhd_usrp_source_0.set_bandwidth((samp_rate / os_factor), 0)
-        self.uhd_usrp_source_0.set_gain(50, 0)
-        self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2)))
+        self.uhd_usrp_source_0.set_gain(65, 0)
+        self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2)) * os_factor)
         self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold)
 
 

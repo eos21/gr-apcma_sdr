@@ -17,6 +17,7 @@
 #include <gnuradio/apcma_sdr/apcma_rx.h>
 #include <inttypes.h>
 #include <iostream>
+#include <iterator>
 #include <omp.h>
 #include <stdint.h>
 #include <stdio.h>
