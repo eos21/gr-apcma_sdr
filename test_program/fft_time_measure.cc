@@ -1,6 +1,6 @@
 
 // Compile command
-// g++ -I /home/haselab/miniconda3/envs/gr310/include/ -lfftw3f ./fft_time_measure.cc ../lib/kiss_fft.c
+// g++ -I /home/haselab/miniconda3/envs/gr310/include/ -lfftw3f ./fft_time_measure.cc
 // Description
 // FFT ライブラリの処理時間計測のためのプログラム
 #include </home/haselab/miniconda3/envs/gr310-apcma/include/fftw3.h>
@@ -10,7 +10,7 @@
 #include <vector>
 int
     main( int argc, char const *argv[] ) {
-    int                              N = 128;
+    int                              N = 4096;
     std::vector<std::complex<float>> upchirp( N );
     std::vector<std::complex<float>> downchirp( N );
 
@@ -27,7 +27,7 @@ int
 
     fftwf_complex *fftw_in  = (fftwf_complex *)fftwf_malloc( sizeof( fftwf_complex ) * N );
     fftwf_complex *fftw_out = (fftwf_complex *)fftwf_malloc( sizeof( fftwf_complex ) * N );
-    const int      times    = 1000 * 1000;
+    const int      times    = 1000 * 1;
     auto           start    = std::chrono::system_clock::now();    // 計測スタート時刻を保存
 
     for ( int i = 0; i < times; i++ ) {
@@ -38,9 +38,7 @@ int
         }
         fftwf_plan fftw_p = fftwf_plan_dft_1d( N, fftw_in, fftw_out, FFTW_FORWARD, FFTW_MEASURE );
 
-        printf( "in:%f\n", fftw_in[40][0] );
         fftwf_execute( fftw_p );
-        printf( "out:%f\n", fftw_out[40][0] );
     }
     auto end  = std::chrono::system_clock::now();    // 計測終了時刻を保存
     auto dur  = end - start;                         // 要した時間を計算

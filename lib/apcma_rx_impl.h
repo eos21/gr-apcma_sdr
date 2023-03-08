@@ -79,7 +79,7 @@ class apcma_rx_impl: public apcma_rx {
     void get_freq_power_peak( const gr_complex* samples,
                               const gr_complex* ref_chirp,
                               bool*             is_peak_bin );
-    bool pulse_detection();
+    bool pulse_detection( std::vector<int>& virtual_freq_offset );
 
   public:
     apcma_rx_impl( int   sf,
