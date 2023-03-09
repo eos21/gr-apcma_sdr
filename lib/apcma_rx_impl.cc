@@ -189,12 +189,22 @@ void
         }
     }
 
-
     // ピークを検出
-    for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
-        // 極値か否かを判断
-        bool is_extremum = fft_mag_filtered[i] > fft_mag_filtered[( i + 1 ) % m_number_of_bins]
-            && fft_mag_filtered[i] > fft_mag_filtered[( i - 1 ) % m_number_of_bins];
+    uint32_t extremum_weight = 10;
+    for ( int i = 0; i < m_number_of_bins; i++ ) {
+        // 極値か否かを判断 重みw
+        bool is_extremum = true;
+        for ( int j = 0; j < ( extremum_weight - 1 ) / 2; j++ ) {
+            if ( fft_mag_filtered[( i - j < 0 ) ? 0 : ( i - j )] < fft_mag_filtered[( ( i - j - 1 ) < 0 ) ? 0 : ( i - j - 1 )] ) {
+                is_extremum = false;
+                break;
+            }
+            if ( fft_mag_filtered[( ( i + j ) > m_number_of_bins - 1 ) ? ( m_number_of_bins - 1 ) : ( i + j )] < fft_mag_filtered[( ( i + j + 1 ) > m_number_of_bins - 1 ) ? ( m_number_of_bins - 1 ) : ( i + j + 1 )] ) {
+                is_extremum = false;
+                break;
+            }
+        }
+
         bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold );    // threholdを超えているか判断
         if ( is_extremum && is_above_threshold ) {
             is_peak_bin[i] = true;
@@ -234,8 +244,7 @@ int
                                  gr_vector_int&             ninput_items,
                                  gr_vector_const_void_star& input_items,
                                  gr_vector_void_star&       output_items ) {
-    auto in = static_cast<const input_type*>( input_items[0] );
-
+    auto             in = static_cast<const input_type*>( input_items[0] );
     std::vector<int> decoded_val;
     // Down sampling
     for ( uint32_t i = 0; i < m_number_of_bins * 2; i++ )
@@ -247,11 +256,11 @@ int
     if ( is_subslot_on ) {
         printf( "%d\t", subslot_cnt );
         // 検出した周波数オフセットをすべて出力する
-        // for ( int i = 0; i < virtual_freq_offset.size(); i++ ) {
-        //     printf( "%d\t", virtual_freq_offset[i] );
-        // }
+        for ( int i = 0; i < virtual_freq_offset.size(); i++ ) {
+            printf( "%d\t", virtual_freq_offset[i] );
+        }
         // offsetの平均を出力
-        printf( "%d", std::accumulate( virtual_freq_offset.begin(), virtual_freq_offset.end(), 0 ) / virtual_freq_offset.size() );
+        // printf( "%d", std::accumulate( virtual_freq_offset.begin(), virtual_freq_offset.end(), 0 ) / virtual_freq_offset.size() );
         printf( "\n" );
         // pulse_train.set( m_pulse_train_length - 1 );
     }
