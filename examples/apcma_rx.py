@@ -31,11 +31,11 @@ class apcma_rx(gr.top_block):
         # Variables
         ##################################################
         self.threshold = threshold = 0.1
-        self.subslot_width = subslot_width = 2**12
-        self.sliding_width = sliding_width = 32
-        self.sf = sf = 12
-        self.samp_rate = samp_rate = 200000
-        self.os_factor = os_factor = 2
+        self.subslot_width = subslot_width = 2**10
+        self.sliding_width = sliding_width = 128
+        self.sf = sf = 10
+        self.samp_rate = samp_rate = 250000
+        self.os_factor = os_factor = 1
         self.number_of_bits = number_of_bits = 12
         self.code_definition = code_definition = 4
 

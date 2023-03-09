@@ -54,7 +54,7 @@ apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def
     fftw_in  = (fftwf_complex*)fftwf_malloc( sizeof( fftwf_complex ) * m_number_of_bins );
     fftw_out = (fftwf_complex*)fftwf_malloc( sizeof( fftwf_complex ) * m_number_of_bins );
     fftw_p   = fftwf_plan_dft_1d(
-        m_number_of_bins, fftw_in, fftw_out, FFTW_BACKWARD, FFTW_MEASURE );
+        m_number_of_bins, fftw_in, fftw_out, FFTW_BACKWARD, FFTW_ESTIMATE );
     build_ref_chirps( &m_upchirp[0], &m_downchirp[0], m_sf );
 
 
@@ -175,17 +175,17 @@ void
 
     // 長さnの窓の平均値filter
     float    fft_mag_filtered[m_number_of_bins];
-    uint32_t window_size = 5;    // 平均値フィルタの窓サイズ
+    uint32_t window_size = 9;    // 平均値フィルタの窓サイズ
     for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
         if ( i < ( window_size - 1 ) / 2 ) {    // 先頭インデックスの例外処理
-            fft_mag_filtered[i] = std::accumulate( fft_mag, fft_mag + 2 * i + 1, 0 )
-                / ( 2 * i + 1 );
+            fft_mag_filtered[i] = std::accumulate( fft_mag, fft_mag + 2 * i + 1, 0.0 )
+                / (float)( 2 * i + 1 );
         } else if ( m_number_of_bins - ( window_size + 1 ) / 2 < i ) {    // 末尾インデックスの例外処理
-            fft_mag_filtered[i] = std::accumulate( fft_mag + m_number_of_bins - ( 2 * ( m_number_of_bins - i - 1 ) + 1 ), fft_mag + m_number_of_bins, 0 )
-                / ( 2 * ( m_number_of_bins - i - 1 ) + 1 );
+            fft_mag_filtered[i] = std::accumulate( fft_mag + m_number_of_bins - ( 2 * ( m_number_of_bins - i - 1 ) + 1 ), fft_mag + m_number_of_bins, 0.0 )
+                / (float)( 2 * ( m_number_of_bins - i - 1 ) + 1 );
         } else {
-            fft_mag_filtered[i] = std::accumulate( fft_mag - ( window_size - 1 ) / 2 + i, fft_mag + ( window_size + 1 ) / 2 + i, 0 )
-                / window_size;
+            fft_mag_filtered[i] = std::accumulate( fft_mag - ( window_size - 1 ) / 2 + i, fft_mag + ( window_size + 1 ) / 2 + i, 0.0 )
+                / (float)window_size;
         }
     }
 
