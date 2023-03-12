@@ -25,14 +25,15 @@ import time
 class apcma_rx(gr.top_block):
 
     def __init__(self):
-        gr.top_block.__init__(self, "APCMA receiving program", catch_exceptions=True)
+        gr.top_block.__init__(
+            self, "APCMA receiving program", catch_exceptions=True)
 
         ##################################################
         # Variables
         ##################################################
-        self.threshold = threshold = 1
+        self.threshold = threshold = 10
         self.subslot_width = subslot_width = 2**12
-        self.sliding_width = sliding_width = 32
+        self.sliding_width = sliding_width = 128
         self.sf = sf = 12
         self.samp_rate = samp_rate = 250000
         self.os_factor = os_factor = 1
@@ -47,7 +48,7 @@ class apcma_rx(gr.top_block):
             uhd.stream_args(
                 cpu_format="fc32",
                 args='',
-                channels=list(range(0,1)),
+                channels=list(range(0, 1)),
             ),
         )
         self.uhd_usrp_source_0.set_samp_rate(samp_rate)
@@ -56,16 +57,16 @@ class apcma_rx(gr.top_block):
         self.uhd_usrp_source_0.set_center_freq(922.8e6, 0)
         self.uhd_usrp_source_0.set_antenna("RX2", 0)
         self.uhd_usrp_source_0.set_bandwidth((samp_rate / os_factor), 0)
-        self.uhd_usrp_source_0.set_gain(65, 0)
-        self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2)) * os_factor)
-        self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold)
-
+        self.uhd_usrp_source_0.set_gain(50, 0)
+        self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2))*os_factor)
+        self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(
+            sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold)
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.uhd_usrp_source_0, 0), (self.apcma_sdr_apcma_rx_0, 0))
-
+        self.connect((self.uhd_usrp_source_0, 0),
+                     (self.apcma_sdr_apcma_rx_0, 0))
 
     def get_threshold(self):
         return self.threshold
@@ -97,14 +98,16 @@ class apcma_rx(gr.top_block):
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
         self.uhd_usrp_source_0.set_samp_rate(self.samp_rate)
-        self.uhd_usrp_source_0.set_bandwidth((self.samp_rate / self.os_factor), 0)
+        self.uhd_usrp_source_0.set_bandwidth(
+            (self.samp_rate / self.os_factor), 0)
 
     def get_os_factor(self):
         return self.os_factor
 
     def set_os_factor(self, os_factor):
         self.os_factor = os_factor
-        self.uhd_usrp_source_0.set_bandwidth((self.samp_rate / self.os_factor), 0)
+        self.uhd_usrp_source_0.set_bandwidth(
+            (self.samp_rate / self.os_factor), 0)
 
     def get_number_of_bits(self):
         return self.number_of_bits
@@ -117,8 +120,6 @@ class apcma_rx(gr.top_block):
 
     def set_code_definition(self, code_definition):
         self.code_definition = code_definition
-
-
 
 
 def main(top_block_cls=apcma_rx, options=None):
