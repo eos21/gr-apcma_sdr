@@ -265,18 +265,9 @@ int
     std::vector<int> virtual_freq_offset;
     bool             is_subslot_on = pulse_detection( &in_downed[0], virtual_freq_offset );
     if ( is_subslot_on ) {
-        printf( "%d\t", subslot_cnt );
-        // 検出した周波数オフセットをすべて出力する
-        for ( int i = 0; i < virtual_freq_offset.size(); i++ ) {
-            printf( "%d\t", virtual_freq_offset[i] );
-        }
-        // offsetの平均を出力
-        // printf( "%d", std::accumulate( virtual_freq_offset.begin(), virtual_freq_offset.end(), 0 ) / virtual_freq_offset.size() );
-        printf( "\n" );
-        // pulse_train.set( m_pulse_train_length - 1 );
+        pulse_train.set( m_pulse_train_length - 1 );
     }
 
-    /*
     //shift register
     if ( pulse_train[0] && pulse_train[m_pulse_train_length - 1] ) {
 #pragma omp parallel
@@ -299,7 +290,7 @@ int
     for ( uint32_t i = 0; i < decoded_val.size(); i++ ) {
         printf( "%d\n", decoded_val[i] );
     }
-    */
+
     subslot_cnt++;
     consume_each( m_samples_per_symbol );
     return m_samples_per_symbol;
