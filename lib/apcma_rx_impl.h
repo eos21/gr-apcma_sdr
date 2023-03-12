@@ -57,7 +57,6 @@ class apcma_rx_impl: public apcma_rx {
     uint32_t m_number_of_bins;        ///< Number of bins in each lora Symbol
     uint32_t m_samples_per_symbol;    ///< Number of samples received per slots
 
-    std::vector<gr_complex> in_downed;      ///< downsampled input
     std::vector<gr_complex> m_downchirp;    ///< Reference downchirp
     std::vector<gr_complex> m_upchirp;      ///< Reference upchirp
 
@@ -75,11 +74,10 @@ class apcma_rx_impl: public apcma_rx {
     uint64_t sliding_cnt;
     uint32_t previous_decoded_val;
 
-    void make_codeword_table( bool do_print );
-    void get_freq_power_peak( const gr_complex* samples,
-                              const gr_complex* ref_chirp,
-                              bool*             is_peak_bin );
-    bool pulse_detection();
+    void                    make_codeword_table( bool do_print );
+    boost::dynamic_bitset<> get_freq_power_peak( const gr_complex* samples,
+                                                 const gr_complex* ref_chirp );
+    bool                    pulse_detection( const gr_complex* input );
 
   public:
     apcma_rx_impl( int   sf,

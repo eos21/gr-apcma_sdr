@@ -46,10 +46,9 @@ apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def
     sliding_cnt = 0;
 
     m_number_of_bins     = ( 1u << m_sf );
-    m_samples_per_symbol = m_number_of_bins * m_os_factor;
+    m_samples_per_symbol = m_subslot_width * m_os_factor;
     m_upchirp.resize( m_number_of_bins );
     m_downchirp.resize( m_number_of_bins );
-    in_downed.resize( m_number_of_bins );
 
     fftw_in  = (fftwf_complex*)fftwf_malloc( sizeof( fftwf_complex ) * m_number_of_bins );
     fftw_out = (fftwf_complex*)fftwf_malloc( sizeof( fftwf_complex ) * m_number_of_bins );
@@ -103,7 +102,7 @@ apcma_rx_impl::~apcma_rx_impl() {
 
 void
     apcma_rx_impl::forecast( int noutput_items, gr_vector_int& ninput_items_required ) {
-    ninput_items_required[0] = m_os_factor * 1 << ( m_sf + 1 );
+    ninput_items_required[0] = m_samples_per_symbol * 2;
 }
 
 
@@ -130,16 +129,16 @@ void
     for ( int i = 0; i < std::pow( 2, m_N_bits ); i++ ) {
         switch ( m_code_def ) {
             case 0:
-                codeword_table[i][0]                                                                         = true;
-                codeword_table[i][m_samples_per_symbol / m_subslot_width * 2 + i]                            = true;
-                codeword_table[i][m_pulse_train_length - 1 - m_samples_per_symbol / m_subslot_width * 2 - i] = true;
-                codeword_table[i][m_pulse_train_length - 1]                                                  = true;
+                codeword_table[i][0]                                                                     = true;
+                codeword_table[i][m_number_of_bins / m_subslot_width * 2 + i]                            = true;
+                codeword_table[i][m_pulse_train_length - 1 - m_number_of_bins / m_subslot_width * 2 - i] = true;
+                codeword_table[i][m_pulse_train_length - 1]                                              = true;
             case 4:
-                codeword_table[i][0]                                                                         = true;
-                codeword_table[i][m_samples_per_symbol / m_subslot_width * 2 + i]                            = true;
-                codeword_table[i][m_samples_per_symbol / m_subslot_width * 4 + i + v_mid_pulse[i] - 1]       = true;
-                codeword_table[i][m_pulse_train_length - 1 - m_samples_per_symbol / m_subslot_width * 2 - i] = true;
-                codeword_table[i][m_pulse_train_length - 1]                                                  = true;
+                codeword_table[i][0]                                                                     = true;
+                codeword_table[i][m_number_of_bins / m_subslot_width * 2 + i]                            = true;
+                codeword_table[i][m_number_of_bins / m_subslot_width * 4 + i + v_mid_pulse[i] - 1]       = true;
+                codeword_table[i][m_pulse_train_length - 1 - m_number_of_bins / m_subslot_width * 2 - i] = true;
+                codeword_table[i][m_pulse_train_length - 1]                                              = true;
         }
         if ( do_print )
             std::cout << i << " : " << codeword_table[i] << std::endl;
@@ -153,10 +152,9 @@ void
  * @param ref_chirp ダウンチャープ
  * @param is_peak_bin ポインタ渡しでpulse_detection()に返す、どの周波数binに電力ピークがあるかを示す
  */
-void
+boost::dynamic_bitset<>
     apcma_rx_impl::get_freq_power_peak( const gr_complex* samples,
-                                        const gr_complex* ref_chirp,
-                                        bool*             is_peak_bin ) {
+                                        const gr_complex* ref_chirp ) {
     std::vector<gr_complex> dechirped( m_number_of_bins );
     // Multiply with ideal downchirp
     volk_32fc_x2_multiply_32fc( &dechirped[0], samples, ref_chirp, m_number_of_bins );
@@ -167,15 +165,16 @@ void
         fftw_in[i][1] = dechirped[i].real();
     }
     fftwf_execute( fftw_p );
+
     // Magnitudeを計算
     float fft_mag[m_number_of_bins];
     for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
         fft_mag[i] = fftw_out[i][0] * fftw_out[i][0] + fftw_out[i][1] * fftw_out[i][1];
     }
 
-    // 長さnの窓の平均値filter
+    // 長さnの平均値filter
     float    fft_mag_filtered[m_number_of_bins];
-    uint32_t window_size = 9;    // 平均値フィルタの窓サイズ
+    uint32_t window_size = 1;    // 平均値フィルタの窓サイズ
     for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
         if ( i < ( window_size - 1 ) / 2 ) {    // 先頭インデックスの例外処理
             fft_mag_filtered[i] = std::accumulate( fft_mag, fft_mag + 2 * i + 1, 0.0 )
@@ -189,16 +188,29 @@ void
         }
     }
 
+
     // ピークを検出
-    for ( uint32_t i = 0; i < m_number_of_bins; i++ ) {
-        // 極値か否かを判断
-        bool is_extremum = fft_mag_filtered[i] > fft_mag_filtered[( i + 1 ) % m_number_of_bins]
-            && fft_mag_filtered[i] > fft_mag_filtered[( i - 1 ) % m_number_of_bins];
+    boost::dynamic_bitset<> is_peak_bin( m_number_of_bins, false );
+    int                     extremum_weight = 9;    // ピーク検出の重み、大きいほど検出しづらくなる
+    for ( int i = 0; i < m_number_of_bins; i++ ) {
+        bool is_extremum = true;
+        for ( int j = 0; j < ( extremum_weight - 1 ) / 2; j++ ) {
+            if ( fft_mag_filtered[( i - j < 0 ) ? 0 : ( i - j )] < fft_mag_filtered[( ( i - j - 1 ) < 0 ) ? 0 : ( i - j - 1 )] ) {
+                is_extremum = false;
+                break;
+            }
+            if ( fft_mag_filtered[( ( i + j ) > m_number_of_bins - 1 ) ? ( m_number_of_bins - 1 ) : ( i + j )] < fft_mag_filtered[( ( i + j + 1 ) > m_number_of_bins - 1 ) ? ( m_number_of_bins - 1 ) : ( i + j + 1 )] ) {
+                is_extremum = false;
+                break;
+            }
+        }
+
         bool is_above_threshold = ( fft_mag_filtered[i] > m_threshold );    // threholdを超えているか判断
         if ( is_extremum && is_above_threshold ) {
             is_peak_bin[i] = true;
         }
     }
+    return is_peak_bin;
 }
 
 
@@ -209,12 +221,11 @@ void
  * @return false subslot is off
  */
 bool
-    apcma_rx_impl::pulse_detection() {
+    apcma_rx_impl::pulse_detection( const gr_complex* input ) {
     bool has_detected_pulse = false;
-    for ( uint32_t sliding_cnt = 0; sliding_cnt < ( m_subslot_width / m_sliding_width ); sliding_cnt++ ) {
+    for ( uint32_t sliding_cnt = 0; sliding_cnt < m_subslot_width; sliding_cnt += m_sliding_width ) {
         // ピークが表れる周波数binを取得
-        bool is_peak_bin[m_number_of_bins] = { false };
-        get_freq_power_peak( &in_downed[sliding_cnt * m_sliding_width], &m_downchirp[0], &is_peak_bin[0] );
+        auto is_peak_bin = get_freq_power_peak( &input[sliding_cnt], &m_downchirp[0] );
         // subslotに対応した周波数binのいずれかがtrueか否か
         for ( uint32_t i = 0; i < m_sliding_width; i++ ) {
             uint32_t index = ( m_number_of_bins - ( m_sliding_width - 1 ) + i ) % m_number_of_bins;
@@ -234,13 +245,15 @@ int
                                  gr_vector_void_star&       output_items ) {
     auto in = static_cast<const input_type*>( input_items[0] );
 
+
+    gr_complex       in_downed[m_number_of_bins * 2];
     std::vector<int> decoded_val;
     // Down sampling
     for ( uint32_t i = 0; i < m_number_of_bins * 2; i++ )
         in_downed[i] = in[int( i * m_os_factor )];
 
     // Pulse detecting
-    bool is_subslot_on = pulse_detection();
+    bool is_subslot_on = pulse_detection( &in_downed[0] );
     if ( is_subslot_on ) {
         pulse_train.set( m_pulse_train_length - 1 );
     }
@@ -269,8 +282,8 @@ int
     }
 
     subslot_cnt++;
-    consume_each( m_subslot_width );
-    return m_subslot_width;
+    consume_each( m_samples_per_symbol );
+    return m_samples_per_symbol;
 }
 }    // namespace apcma_sdr
 } /* namespace gr */
