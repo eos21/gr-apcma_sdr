@@ -14,7 +14,7 @@
 /* BINDTOOL_GEN_AUTOMATIC(0)                                                       */
 /* BINDTOOL_USE_PYGCCXML(0)                                                        */
 /* BINDTOOL_HEADER_FILE(apcma_rx.h)                                        */
-/* BINDTOOL_HEADER_FILE_HASH(eaa3f71664387a1f32c58d17c4d7f607)                     */
+/* BINDTOOL_HEADER_FILE_HASH(764968db782a641a3c9475edb6c7438f)                     */
 /***********************************************************************************/
 
 #include <pybind11/complex.h>
@@ -43,6 +43,7 @@ void
               py::arg( "subslot_width" ),
               py::arg( "sliding_width" ),
               py::arg( "threshold" ),
+              py::arg( "extremum_weight" ),
               D( apcma_rx, make ) )
 
 

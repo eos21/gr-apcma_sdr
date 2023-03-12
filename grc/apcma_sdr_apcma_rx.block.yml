@@ -30,6 +30,9 @@ parameters:
 - id: threshold
   label: Threshold
   dtype: float
+- id: extremum_weight
+  label: Weight of Extremum
+  dtype: int
 inputs:
 - label: in
   domain: stream

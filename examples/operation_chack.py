@@ -22,8 +22,6 @@ from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 
 
-
-
 class operation_chack(gr.top_block):
 
     def __init__(self):
@@ -40,21 +38,25 @@ class operation_chack(gr.top_block):
         self.os_factor = os_factor = 1
         self.number_of_bits = number_of_bits = 8
         self.code_definition = code_definition = 4
+        self.extremum_weight = extremum_weight = 5
 
         ##################################################
         # Blocks
         ##################################################
-        self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate,True)
-        self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold)
-        self.analog_noise_source_x_0 = analog.noise_source_c(analog.GR_GAUSSIAN, 1, 0)
-
+        self.blocks_throttle_0 = blocks.throttle(
+            gr.sizeof_gr_complex*1, samp_rate, True)
+        self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(
+            sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold, extremum_weight)
+        self.analog_noise_source_x_0 = analog.noise_source_c(
+            analog.GR_GAUSSIAN, 1, 0)
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_noise_source_x_0, 0), (self.blocks_throttle_0, 0))
-        self.connect((self.blocks_throttle_0, 0), (self.apcma_sdr_apcma_rx_0, 0))
-
+        self.connect((self.analog_noise_source_x_0, 0),
+                     (self.blocks_throttle_0, 0))
+        self.connect((self.blocks_throttle_0, 0),
+                     (self.apcma_sdr_apcma_rx_0, 0))
 
     def get_threshold(self):
         return self.threshold
@@ -104,8 +106,6 @@ class operation_chack(gr.top_block):
 
     def set_code_definition(self, code_definition):
         self.code_definition = code_definition
-
-
 
 
 def main(top_block_cls=operation_chack, options=None):

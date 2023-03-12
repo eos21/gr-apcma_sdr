@@ -55,6 +55,7 @@ class apcma_rx_impl: public apcma_rx {
 
     uint32_t m_sliding_width;         ///< Sliding window width
     float    m_threshold;             ///< Power threshold for subslot detecting
+    uint32_t m_extremum_weight;       ///< Weight factor for power peak detecting
     uint32_t m_number_of_bins;        ///< Number of bins in each lora Symbol
     uint32_t m_samples_per_symbol;    ///< Number of samples received per slots
 
@@ -88,7 +89,8 @@ class apcma_rx_impl: public apcma_rx {
                    int   N_bits,
                    int   subslot_width,
                    int   sliding_width,
-                   float threshold );
+                   float threshold,
+                   int   extremum_weight );
     ~apcma_rx_impl();
 
     // Where all the action really happens

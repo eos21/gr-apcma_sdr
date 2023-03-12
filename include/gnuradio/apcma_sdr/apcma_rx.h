@@ -38,7 +38,8 @@ class APCMA_SDR_API apcma_rx: virtual public gr::block {
                       int   N_bits,
                       int   subslot_width,
                       int   sliding_width,
-                      float threshold );
+                      float threshold,
+                      int   extremum_weight );
 };
 
 }    // namespace apcma_sdr

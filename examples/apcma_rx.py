@@ -39,6 +39,7 @@ class apcma_rx(gr.top_block):
         self.os_factor = os_factor = 1
         self.number_of_bits = number_of_bits = 4
         self.code_definition = code_definition = 4
+        self.extremum_weight = extremum_weight = 5
 
         ##################################################
         # Blocks
@@ -54,13 +55,13 @@ class apcma_rx(gr.top_block):
         self.uhd_usrp_source_0.set_samp_rate(samp_rate)
         # No synchronization enforced.
 
-        self.uhd_usrp_source_0.set_center_freq(922.8e6, 0)
+        self.uhd_usrp_source_0.set_center_freq(920e6, 0)
         self.uhd_usrp_source_0.set_antenna("RX2", 0)
         self.uhd_usrp_source_0.set_bandwidth((samp_rate / os_factor), 0)
         self.uhd_usrp_source_0.set_gain(50, 0)
         self.uhd_usrp_source_0.set_min_output_buffer((2**(sf+2))*os_factor)
         self.apcma_sdr_apcma_rx_0 = apcma_sdr.apcma_rx(
-            sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold)
+            sf, samp_rate, os_factor, code_definition, number_of_bits, subslot_width, sliding_width, threshold, extremum_weight)
 
         ##################################################
         # Connections

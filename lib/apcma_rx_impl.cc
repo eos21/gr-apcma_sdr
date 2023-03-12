@@ -15,27 +15,28 @@ namespace apcma_sdr {
 using input_type  = gr_complex;
 using output_type = float;
 apcma_rx::sptr
-    apcma_rx::make( int sf, int samp_rate, int os_factor, int code_def, int N_bits, int subslot_width, int sliding_width, float threshold ) {
-    return gnuradio::make_block_sptr<apcma_rx_impl>( sf, samp_rate, os_factor, code_def, N_bits, subslot_width, sliding_width, threshold );
+    apcma_rx::make( int sf, int samp_rate, int os_factor, int code_def, int N_bits, int subslot_width, int sliding_width, float threshold, int extremum_weight ) {
+    return gnuradio::make_block_sptr<apcma_rx_impl>( sf, samp_rate, os_factor, code_def, N_bits, subslot_width, sliding_width, threshold, extremum_weight );
 }
 
 
 /*
  * The private constructor
  */
-apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def, int N_bits, int subslot_width, int sliding_width, float threshold ):
+apcma_rx_impl::apcma_rx_impl( int sf, int samp_rate, int os_factor, int code_def, int N_bits, int subslot_width, int sliding_width, float threshold, int extremum_weight ):
     gr::block( "apcma_rx",
                gr::io_signature::make( 1, 1, sizeof( input_type ) ),
                gr::io_signature::make( 0, 0, sizeof( output_type ) ) ) {
-    m_sf            = sf;
-    m_samp_rate     = samp_rate;
-    m_band_width    = samp_rate / os_factor;
-    m_N_bits        = N_bits;
-    m_os_factor     = os_factor;
-    m_code_def      = code_def;
-    m_sliding_width = sliding_width;
-    m_subslot_width = subslot_width;
-    m_threshold     = threshold;
+    m_sf              = sf;
+    m_samp_rate       = samp_rate;
+    m_band_width      = samp_rate / os_factor;
+    m_N_bits          = N_bits;
+    m_os_factor       = os_factor;
+    m_code_def        = code_def;
+    m_sliding_width   = sliding_width;
+    m_subslot_width   = subslot_width;
+    m_threshold       = threshold;
+    m_extremum_weight = extremum_weight;
 
     if ( m_sliding_width > m_subslot_width ) {
         std::cerr << "Sliding width must be smaller than subslot width!" << std::endl;
@@ -191,10 +192,9 @@ boost::dynamic_bitset<>
 
     // ピークを検出
     boost::dynamic_bitset<> is_peak_bin( m_number_of_bins, false );
-    int                     extremum_weight = 9;    // ピーク検出の重み、大きいほど検出しづらくなる
     for ( int i = 0; i < m_number_of_bins; i++ ) {
         bool is_extremum = true;
-        for ( int j = 0; j < ( extremum_weight - 1 ) / 2; j++ ) {
+        for ( int j = 0; j < ( m_extremum_weight - 1 ) / 2; j++ ) {
             if ( fft_mag_filtered[( i - j < 0 ) ? 0 : ( i - j )] < fft_mag_filtered[( ( i - j - 1 ) < 0 ) ? 0 : ( i - j - 1 )] ) {
                 is_extremum = false;
                 break;
